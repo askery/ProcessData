@@ -14,31 +14,40 @@ start=datetime.now()
 
 from pyspark import SparkContext
 #1 ALL DAILY FILES ARE IN THE SAME FOLDER - JUST ADDRESSING THE FOLDER PATH IS ENOUGHT TO GATHER EVERYTHING
-logFile = "/media/data/rowData_201304_201512/NEG_20130920.TXT"  # FILE FROM SYSTEM
+logFile = "/media/data/rowData_201304_201601/NEG_20130920.TXT"  # FILE FROM SYSTEM
 #
 sc = SparkContext("local", "Minute Data")
 
-#2 CREATES THE RDD 
+#2 Creates the RDD 
 logData = sc.textFile(logFile)
 
 
-#2 SELECTION OF STOCKS 
-stocks = ['PETR3', 'PETR4' ,'ABEV3', 'BBAS3', 'BBDC4', 'BVMF3', 'GGBR4', 'ITSA4', 'ITUB4','VALE3', 'VALE5']
+#2 Selection of stocks - here we are slecting the 61 IBOV (main BM&FBovespa Index) stocks 
+stocks = ['ABEV3','BBAS3']
+
+#stocks = ['ABEV3','BBAS3','BBDC3','BBDC4','BBSE3','BRAP4','BRFS3','BRKM5','BRML3','BVMF3',
+#'CCRO3','CESP6','CIEL3','CMIG4','CPFE3','CPLE6','CSAN3','CSNA3','CTIP3','CYRE3',
+#'ECOR3','EMBR3','ENBR3','EQTL3','ESTC3','FIBR3','GGBR4','GOAU4','HGTX3','HYPE3',
+#'ITSA4','ITUB4','JBSS3','KLBN11','KROT3','LAME4','LREN3','MRFG3','MRVE3','MULT3',
+#'NATU3','OIBR3','PCAR4','PETR3','PETR4','QUAL3','RADL3','RENT3','RUMO3','SANB11',
+#'SBSP3','SMLE3','SUZB5','TBLE3','TIMP3','UGPA3','USIM5','VALE3','VALE5','VIVT4','WEGE3']
+
+#3 selection filter
 def filterStock(line):
     return any(keyword in line for keyword in stocks)
 
-#3 IF WANT ALL STOCKS, COMMENT EVERYTHING BETWEEN #2 AND #3 AND UNCOMMENT EVERYTHING BETWEEN #3 AND #4
-# CODE TO DEAL WITH ALL STOCKS COMING SOON
 
-#4 SELECTION OF SUITABLE COLUMNS AND KEY
+#4 Selection of columns 
 def makeColumns(line):
-    pieces = line.split(';');   # SEPARATORS ARE ";"
-    date   = pieces[0]          # FIRST COLUMN  - DATE
-    symb   = pieces[1].strip()  # SECOND COLUMN - STOCK SYMBOL
-    hour   = pieces[5][:2]      # EXTRACT HOUR FROM TRANSACTION TIME FROM (HH:MM)
-    minu   = pieces[5][3:5]     # EXTRACT MINUTE FROM (HH:MM)
-    key    = symb + date + hour + minu # KEY DEFINITION AS CONCATENATION OF TIME COLUMNS
-    output = str(hour) + str(minu) + "   " + symb + "   " + str("%.2f" % float(pieces[3])) + "   " + str(int(pieces[4])) # OUTOUT FORMAT WITHOUT 'U', ',' OR '()'
+    pieces  = line.split(';');          # delimiters are ";"
+    date    = pieces[0].strip()         # first column  - date
+    symb    = pieces[1].strip()         # second column - stock symbol
+    time    = pieces[5].split(':')      # Extract hours, minutes, seconds and miliseconds from trade time (HH:MM:SS.NNN)
+    hour    = time[0]                   # extract hour - fisrt element in 'time'   
+    minu    = time[1]                   # extract minutes - second element in 'time'
+    sec     = time[2].split('.')
+    key     = symb + date + hour + minu # KEY DEFINITION AS CONCATENATION OF TIME COLUMNS
+    output  = str(hour) + str(minu) + "   " + symb + "   " + str("%.2f" % float(pieces[3])) + "   " + str(int(pieces[4])) # OUTOUT FORMAT WITHOUT 'U', ',' OR '()'
     return (key, output)
 
 #5 SELECT FIRST MINUTE OCCURENCY. TO PICK LAST USE 'return b;'
